@@ -24,6 +24,10 @@ import {
   CreditCard,
   BarChart3,
   ShieldAlert,
+  Lock,
+  Bell,
+  Newspaper,
+  Sliders,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -39,10 +43,14 @@ const productIcons: Record<string, React.ReactNode> = {
   vpn: <Lock className="w-4 h-4" />,
   notify: <Bell className="w-4 h-4" />,
   articles: <Newspaper className="w-4 h-4" />,
+  manage: <Sliders className="w-4 h-4" />,
   platform: <BarChart3 className="w-4 h-4" />,
 };
 
-const products = [{ id: "platform", name: "Platform" }];
+const products = [
+  { id: "platform", name: "Platform" },
+  { id: "manage", name: "Manage" },
+];
 
 const mainItems = [
   { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
@@ -96,6 +104,8 @@ export const DashboardSidebar = () => {
         return "/dashboard/notifications";
       case "articles":
         return "/dashboard/media";
+      case "manage":
+        return "/dashboard/settings";
       case "platform":
       default:
         return "/dashboard/platform";
