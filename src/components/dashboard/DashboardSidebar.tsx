@@ -11,8 +11,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboard,
-  Package,
   Users,
   Settings,
   Globe,
@@ -52,24 +50,18 @@ const products = [
   { id: "manage", name: "Manage" },
 ];
 
-const mainItems = [
-  { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Products", url: "/dashboard/products", icon: Package },
-  { title: "Users", url: "/dashboard/users", icon: Users },
-];
-
 const platformItems = [
-  { title: "Overview", url: "/dashboard/platform", icon: BarChart3 },
-  { title: "Users", url: "/dashboard/platform/users", icon: Users },
-  { title: "Accounts", url: "/dashboard/platform/accounts", icon: CreditCard },
+  { title: "Overview", url: "/platform", icon: BarChart3 },
+  { title: "Users", url: "/platform/users", icon: Users },
+  { title: "Accounts", url: "/platform/accounts", icon: CreditCard },
   {
     title: "Organizations",
-    url: "/dashboard/platform/organizations",
+    url: "/platform/organizations",
     icon: Building2,
   },
-  { title: "Products", url: "/dashboard/platform/products", icon: Layers },
-  { title: "Growth", url: "/dashboard/platform/growth", icon: TrendingUp },
-  { title: "Security", url: "/dashboard/platform/security", icon: ShieldAlert },
+  { title: "Products", url: "/platform/products", icon: Layers },
+  { title: "Growth", url: "/platform/growth", icon: TrendingUp },
+  { title: "Security", url: "/platform/security", icon: ShieldAlert },
 ];
 
 const bottomItems = [
@@ -108,7 +100,7 @@ export const DashboardSidebar = () => {
         return "/dashboard/settings";
       case "platform":
       default:
-        return "/dashboard/platform";
+        return "/platform";
     }
   };
 
@@ -135,17 +127,17 @@ export const DashboardSidebar = () => {
     }
 
     return [
-      { title: "Overview", url: "/dashboard/platform", icon: BarChart3 },
-      { title: "Users", url: "/dashboard/platform/users", icon: Users },
+      { title: "Overview", url: "/platform", icon: BarChart3 },
+      { title: "Users", url: "/platform/users", icon: Users },
       {
         title: "Accounts",
-        url: "/dashboard/platform/accounts",
+        url: "/platform/accounts",
         icon: CreditCard,
       },
-      { title: "Growth", url: "/dashboard/platform/growth", icon: TrendingUp },
+      { title: "Growth", url: "/platform/growth", icon: TrendingUp },
       {
         title: "Security",
-        url: "/dashboard/platform/security",
+        url: "/platform/security",
         icon: ShieldAlert,
       },
     ];
@@ -205,35 +197,7 @@ export const DashboardSidebar = () => {
           </div>
         </SidebarGroup>
 
-        {/* Dashboard */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60">
-            Overview
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    className={`transition-all duration-200 ${
-                      isActive(item.url)
-                        ? "bg-primary/15 text-primary font-semibold"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                    }`}
-                  >
-                    <Link to={item.url} className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm">{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Product-Specific Platform Routes */}
+        {/* Platform Routes */}
         {(selectedProduct === "platform" || selectedProduct === "notify") && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 flex items-center gap-2">

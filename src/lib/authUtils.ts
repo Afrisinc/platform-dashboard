@@ -13,8 +13,7 @@ export const logoutHandler = (route?: string): void => {
   localStorage.removeItem("user");
   localStorage.removeItem("token_type");
   localStorage.removeItem("token_expires_at");
-  const redirectUrl =
-    route || getConfigValue("authUiUrl") || "/";
+  const redirectUrl = route || getConfigValue("authUiUrl") || "/";
   window.location.href = redirectUrl;
 };
 
