@@ -51,9 +51,13 @@ COPY --from=builder /app/dist-server ./dist-server
 # Copy config
 COPY --from=builder /app/dist/config.json ./dist/config.json
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 ENV NODE_ENV=production
 ENV PORT=8017
 
 EXPOSE 8017
 
-CMD ["node", "dist-server/server/index.js"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -12,6 +12,17 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     return config!;
   }
 
+  const getEnvValue = (key: string) => {
+    const windowEnv =
+      typeof window !== "undefined" && (window as any).__ENV__
+        ? (window as any).__ENV__[key]
+        : null;
+    if (windowEnv && !windowEnv.startsWith("__")) {
+      return windowEnv;
+    }
+    return (import.meta.env as any)[key];
+  };
+
   try {
     const response = await fetch("/config.json", {
       method: "GET",
@@ -24,22 +35,22 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
       runtimeConfig = await response.json();
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || runtimeConfig.apiUrl || "";
+    const apiUrl = getEnvValue("VITE_API_URL") || runtimeConfig.apiUrl || "";
     config = {
       serverUrl: apiUrl,
       apiUrl: apiUrl,
       authUiUrl:
-        import.meta.env.VITE_AUTH_UI_URL || runtimeConfig.authUiUrl || "",
+        getEnvValue("VITE_AUTH_UI_URL") || runtimeConfig.authUiUrl || "",
     };
 
     configLoaded = true;
     return config;
   } catch {
-    const apiUrl = import.meta.env.VITE_API_URL || "";
+    const apiUrl = getEnvValue("VITE_API_URL") || "";
     config = {
       serverUrl: apiUrl,
       apiUrl: apiUrl,
-      authUiUrl: import.meta.env.VITE_AUTH_UI_URL || "",
+      authUiUrl: getEnvValue("VITE_AUTH_UI_URL") || "",
     };
     configLoaded = true;
     return config;
