@@ -11,8 +11,8 @@ const SSOCallback = () => {
 
     if (token) {
       localStorage.setItem("token", token);
-      window.history.replaceState({}, document.title, "/dashboard/platform");
-      navigate("/dashboard/platform", { replace: true });
+      window.history.replaceState({}, document.title, "/platform");
+      navigate("/platform", { replace: true });
     } else {
       navigate("/", { replace: true });
     }
