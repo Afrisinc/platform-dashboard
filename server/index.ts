@@ -6,7 +6,7 @@ import { seoMiddleware } from "./seo-middleware.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === "production";
-const PORT = process.env.PORT || 8090;
+const PORT = process.env.PORT || 8017;
 
 // In production, server runs from /app/dist-server/server/
 // In dev, server runs from /project/server/
