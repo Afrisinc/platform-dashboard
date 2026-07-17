@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/sidebar";
 import {
   Users,
-  Settings,
   Globe,
   LogOut,
   TrendingUp,
@@ -36,10 +35,6 @@ const platformItems = [
   { title: "Products", url: "/platform/products", icon: Layers },
   { title: "Growth", url: "/platform/growth", icon: TrendingUp },
   { title: "Security", url: "/platform/security", icon: ShieldAlert },
-];
-
-const bottomItems = [
-  { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
 export const DashboardSidebar = () => {
@@ -81,31 +76,6 @@ export const DashboardSidebar = () => {
             <SidebarMenu className="gap-1">
               {platformItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    className={`transition-all duration-200 ${
-                      isActive(item.url)
-                        ? "bg-primary/15 text-primary font-semibold"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                    }`}
-                  >
-                    <Link to={item.url} className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm">{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Settings */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {bottomItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     className={`transition-all duration-200 ${
