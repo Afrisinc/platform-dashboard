@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -15,40 +13,15 @@ import {
   Settings,
   Globe,
   LogOut,
-  Shield,
   TrendingUp,
   Building2,
   Layers,
   CreditCard,
   BarChart3,
   ShieldAlert,
-  Lock,
-  Bell,
-  Newspaper,
-  Sliders,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const productIcons: Record<string, React.ReactNode> = {
-  vpn: <Lock className="w-4 h-4" />,
-  notify: <Bell className="w-4 h-4" />,
-  articles: <Newspaper className="w-4 h-4" />,
-  manage: <Sliders className="w-4 h-4" />,
-  platform: <BarChart3 className="w-4 h-4" />,
-};
-
-const products = [
-  { id: "platform", name: "Platform" },
-  { id: "manage", name: "Manage" },
-];
 
 const platformItems = [
   { title: "Overview", url: "/platform", icon: BarChart3 },
@@ -70,82 +43,13 @@ const bottomItems = [
 
 export const DashboardSidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { signOut } = useAuth();
-  const [selectedProduct, setSelectedProduct] = useState<string>(() => {
-    return localStorage.getItem("selectedProduct") || "platform";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("selectedProduct", selectedProduct);
-  }, [selectedProduct]);
 
   const isActive = (url: string) => location.pathname === url;
 
   const handleSignOut = async () => {
     await signOut();
-    // Redirect to landing page
     window.location.href = "/";
-  };
-
-  const getProductRoute = (productId: string) => {
-    switch (productId) {
-      case "vpn":
-        return "/dashboard/products/vpn";
-      case "notify":
-        return "/dashboard/notifications";
-      case "articles":
-        return "/dashboard/media";
-      case "manage":
-        return "/dashboard/settings";
-      case "platform":
-      default:
-        return "/platform";
-    }
-  };
-
-  const getProductPlatformRoutes = (productId: string) => {
-    if (productId === "notify") {
-      return [
-        {
-          title: "Overview",
-          url: "/dashboard/notifications/overview",
-          icon: BarChart3,
-        },
-        { title: "Users", url: "/dashboard/notifications/users", icon: Users },
-        {
-          title: "Accounts",
-          url: "/dashboard/notifications/accounts",
-          icon: CreditCard,
-        },
-        {
-          title: "Security",
-          url: "/dashboard/notifications/security",
-          icon: ShieldAlert,
-        },
-      ];
-    }
-
-    return [
-      { title: "Overview", url: "/platform", icon: BarChart3 },
-      { title: "Users", url: "/platform/users", icon: Users },
-      {
-        title: "Accounts",
-        url: "/platform/accounts",
-        icon: CreditCard,
-      },
-      { title: "Growth", url: "/platform/growth", icon: TrendingUp },
-      {
-        title: "Security",
-        url: "/platform/security",
-        icon: ShieldAlert,
-      },
-    ];
-  };
-
-  const handleProductChange = (productId: string) => {
-    setSelectedProduct(productId);
-    navigate(getProductRoute(productId));
   };
 
   return (
@@ -169,88 +73,30 @@ export const DashboardSidebar = () => {
         </Link>
       </div>
       <SidebarContent>
-        {/* Product Selector */}
-        <SidebarGroup className="px-0 py-3">
-          <div className="px-4">
-            <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 mb-3">
-              Product
-            </p>
-            <Select value={selectedProduct} onValueChange={handleProductChange}>
-              <SelectTrigger className="w-full h-9 border-border/50 bg-background hover:border-border/80 transition-colors text-sm font-medium">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="w-[--radix-select-trigger-width]">
-                {products.map((product) => (
-                  <SelectItem
-                    key={product.id}
-                    value={product.id}
-                    className="text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      {productIcons[product.id]}
-                      {product.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </SidebarGroup>
-
         {/* Platform Routes */}
-        {(selectedProduct === "platform" || selectedProduct === "notify") && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground/60 flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5" />
-              {selectedProduct === "platform" ? "Platform" : "Notify"}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {selectedProduct === "platform"
-                  ? platformItems.map((item) => (
-                      <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton
-                          asChild
-                          className={`transition-all duration-200 ${
-                            isActive(item.url)
-                              ? "bg-primary/15 text-primary font-semibold"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                          }`}
-                        >
-                          <Link
-                            to={item.url}
-                            className="flex items-center gap-3"
-                          >
-                            <item.icon className="w-4 h-4 flex-shrink-0" />
-                            <span className="text-sm">{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))
-                  : getProductPlatformRoutes(selectedProduct).map((item) => (
-                      <SidebarMenuItem key={item.url}>
-                        <SidebarMenuButton
-                          asChild
-                          className={`transition-all duration-200 ${
-                            isActive(item.url)
-                              ? "bg-primary/15 text-primary font-semibold"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                          }`}
-                        >
-                          <Link
-                            to={item.url}
-                            className="flex items-center gap-3"
-                          >
-                            <item.icon className="w-4 h-4 flex-shrink-0" />
-                            <span className="text-sm">{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              {platformItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton
+                    asChild
+                    className={`transition-all duration-200 ${
+                      isActive(item.url)
+                        ? "bg-primary/15 text-primary font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    <Link to={item.url} className="flex items-center gap-3">
+                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {/* Settings */}
         <SidebarGroup>
