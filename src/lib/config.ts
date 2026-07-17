@@ -1,5 +1,7 @@
 export interface RuntimeConfig {
   serverUrl: string;
+  apiUrl: string;
+  authUiUrl: string;
 }
 
 let config: RuntimeConfig | null = null;
@@ -17,24 +19,27 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
       cache: "no-store",
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to load config.json: ${response.status}`);
+    let runtimeConfig: Partial<RuntimeConfig> = {};
+    if (response.ok) {
+      runtimeConfig = await response.json();
     }
 
-    const runtimeConfig = await response.json();
-
-    // Priority: VITE_API_URL env var (set at build time) > config.json > empty string
+    const apiUrl = import.meta.env.VITE_API_URL || runtimeConfig.apiUrl || "";
     config = {
-      serverUrl: import.meta.env.VITE_API_URL || runtimeConfig.serverUrl || "",
+      serverUrl: apiUrl,
+      apiUrl: apiUrl,
+      authUiUrl:
+        import.meta.env.VITE_AUTH_UI_URL || runtimeConfig.authUiUrl || "",
     };
-
-    // Configuration loaded
 
     configLoaded = true;
     return config;
   } catch {
+    const apiUrl = import.meta.env.VITE_API_URL || "";
     config = {
-      serverUrl: import.meta.env.VITE_API_URL || "",
+      serverUrl: apiUrl,
+      apiUrl: apiUrl,
+      authUiUrl: import.meta.env.VITE_AUTH_UI_URL || "",
     };
     configLoaded = true;
     return config;
