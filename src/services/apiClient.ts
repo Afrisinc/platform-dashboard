@@ -5,12 +5,12 @@ import { getRuntimeConfig } from "@/lib/config";
 const createApiClient = () => {
   const config = getRuntimeConfig();
 
-  const token = localStorage.getItem("token");
   const instance = axios.create({
     baseURL: config.serverUrl || import.meta.env.VITE_API_URL,
   });
 
   instance.interceptors.request.use(async (request) => {
+    const token = localStorage.getItem("token");
     if (token) {
       request.headers.Authorization = `Bearer ${token}`;
     }

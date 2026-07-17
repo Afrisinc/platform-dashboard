@@ -36,6 +36,7 @@ import PlatformSecurity from "./pages/platform/Security";
 
 import NotFound from "./pages/NotFound";
 import TestComponent from "./pages/TestComponent";
+import SSOCallback from "./pages/SSOCallback";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,8 @@ const App = () => {
                 <ScrollToTop />
                 <AuthProvider>
                   <Routes>
+                    {/* SSO Callback Route */}
+                    <Route path="/sso/callback" element={<SSOCallback />} />
                     {/* Dashboard Routes - at root level */}
                     <Route path="/" element={<DashboardLayout />}>
                       <Route index element={<DashboardOverview />} />
