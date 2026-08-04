@@ -28,36 +28,18 @@ RUN VITE_API_URL=${VITE_API_URL} \
     VITE_FB_APP_ID=${VITE_FB_APP_ID} \
     pnpm build
 
-# Build the SSR server
-RUN pnpm build:server
-
-# ---------- Serve with SSR ----------
-FROM node:20-alpine AS runner
+# ---------- Serve SPA with Nginx ----------
+FROM nginx:alpine AS runner
 WORKDIR /app
 
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@10 --activate
-
-# Copy package files and install production dependencies only
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile
-
 # Copy built client assets
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy built server
-COPY --from=builder /app/dist-server ./dist-server
+# Copy nginx config for SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy config
-COPY --from=builder /app/dist/config.json ./dist/config.json
-
-# Copy entrypoint script
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
-
-ENV NODE_ENV=production
 ENV PORT=8017
 
 EXPOSE 8017
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
