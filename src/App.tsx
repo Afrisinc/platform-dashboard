@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { getCurrentTheme } from "@/lib/theme";
 import { useThemeSync } from "@/hooks/useThemeSync";
+import { AfrisincLoader } from "@/components/AfrisincLoader";
 
 // Public Pages removed - dashboard only
 
@@ -74,15 +75,34 @@ function AppContent() {
 }
 
 const App = () => {
-  // Sync theme from shared cookie on mount
+  const [isReady, setIsReady] = useState(false);
+
+  // Sync theme from shared cookie on mount with minimum delay
   useEffect(() => {
-    const sharedTheme = getCurrentTheme();
-    // Update next-themes storage to match shared cookie
-    if (sharedTheme) {
-      localStorage.setItem("theme", sharedTheme);
-      document.documentElement.classList.toggle("dark", sharedTheme === "dark");
-    }
+    const initializeApp = async () => {
+      const sharedTheme = getCurrentTheme();
+      // Update next-themes storage to match shared cookie
+      if (sharedTheme) {
+        localStorage.setItem("theme", sharedTheme);
+        document.documentElement.classList.toggle("dark", sharedTheme === "dark");
+      }
+
+      // Minimum 800ms delay to show loader
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsReady(true);
+    };
+
+    initializeApp();
   }, []);
+
+  if (!isReady) {
+    return (
+      <AfrisincLoader
+        message="Initializing Dashboard"
+        submessage="Please wait..."
+      />
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
