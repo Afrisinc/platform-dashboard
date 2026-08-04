@@ -8,21 +8,13 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ScrollToTop } from "@/components/ScrollToTop";
-import { AnalyticsProvider } from "@/components/AnalyticsProvider";
-import { CookieBanner } from "@/components/CookieBanner";
+import { getCurrentTheme } from "@/lib/theme";
+import { useThemeSync } from "@/hooks/useThemeSync";
 
 // Public Pages removed - dashboard only
 
-// Dashboard Pages
+// Layout
 import DashboardLayout from "./components/dashboard/DashboardLayout";
-import DashboardOverview from "./pages/dashboard/Overview";
-import DashboardProducts from "./pages/dashboard/Products";
-import VPNManagement from "./pages/dashboard/VPNManagement";
-import DashboardUsers from "./pages/dashboard/Users";
-import DashboardMedia from "./pages/dashboard/Media";
-import DashboardNotifications from "./pages/dashboard/Notifications";
-import DashboardSettings from "./pages/dashboard/Settings";
-import AIContent from "./pages/dashboard/AIContent";
 
 // Platform Admin Pages
 import PlatformOverview from "./pages/platform/Overview";
@@ -40,139 +32,71 @@ import SSOCallback from "./pages/SSOCallback";
 
 const queryClient = new QueryClient();
 
-// Inject GA4 script
-function injectGAScript() {
-  const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID;
-  const debug = import.meta.env.VITE_GA_DEBUG === "true";
-  const isProd = import.meta.env.MODE === "production";
+function AppContent() {
+  useThemeSync();
 
-  // Only load GA4 in production or when debug is enabled
-  if (!gaId || (!isProd && !debug)) {
-    return;
-  }
+  return (
+    <BrowserRouter>
+      <ScrollToTop />
+      <AuthProvider>
+        <Routes>
+          {/* SSO Callback Route */}
+          <Route path="/sso/callback" element={<SSOCallback />} />
 
-  // Inject dataLayer and gtag function
-  const win = window as Window & {
-    dataLayer?: unknown[];
-    gtag?: (...args: unknown[]) => void;
-  };
-  win.dataLayer = win.dataLayer || [];
-  function gtag(...args: unknown[]) {
-    win.dataLayer?.push(...args);
-  }
-  win.gtag = gtag;
+          {/* Platform Routes */}
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<PlatformOverview />} />
+            <Route path="platform" element={<PlatformOverview />} />
+            <Route path="platform/users" element={<PlatformUsers />} />
+            <Route path="platform/accounts" element={<PlatformAccounts />} />
+            <Route
+              path="platform/organizations"
+              element={<PlatformOrganizations />}
+            />
+            <Route path="platform/products" element={<PlatformProducts />} />
+            <Route
+              path="platform/products/:productId"
+              element={<ProductDetail />}
+            />
+            <Route path="platform/growth" element={<PlatformGrowth />} />
+            <Route path="platform/security" element={<PlatformSecurity />} />
+          </Route>
 
-  gtag("js", new Date());
-  gtag("consent", "default", {
-    ad_storage: "denied",
-    analytics_storage: "denied",
-    wait_for_update: 500,
-  });
-  gtag("config", gaId, {
-    page_path: window.location.pathname,
-    debug_mode: debug,
-    send_page_view: false,
-  });
+          {/* Test Component Route */}
+          <Route path="/testcomponent" element={<TestComponent />} />
 
-  // Load GA4 script
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
-  document.head.appendChild(script);
+          {/* Catch-all */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }
 
 const App = () => {
-  // Inject GA4 script on component mount
+  // Sync theme from shared cookie on mount
   useEffect(() => {
-    injectGAScript();
+    const sharedTheme = getCurrentTheme();
+    // Update next-themes storage to match shared cookie
+    if (sharedTheme) {
+      localStorage.setItem("theme", sharedTheme);
+      document.documentElement.classList.toggle("dark", sharedTheme === "dark");
+    }
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme={getCurrentTheme()}
+          enableSystem
+          storageKey="theme"
+        >
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <AnalyticsProvider>
-                <ScrollToTop />
-                <AuthProvider>
-                  <Routes>
-                    {/* SSO Callback Route */}
-                    <Route path="/sso/callback" element={<SSOCallback />} />
-                    {/* Dashboard Routes - at root level */}
-                    <Route path="/" element={<DashboardLayout />}>
-                      <Route index element={<DashboardOverview />} />
-                      <Route path="ai-content" element={<AIContent />} />
-                      <Route path="products" element={<DashboardProducts />} />
-                      <Route path="products/vpn" element={<VPNManagement />} />
-                      <Route path="users" element={<DashboardUsers />} />
-                      <Route path="media" element={<DashboardMedia />} />
-                      <Route
-                        path="notifications"
-                        element={<DashboardNotifications />}
-                      />
-                      <Route
-                        path="notifications/overview"
-                        element={<DashboardNotifications />}
-                      />
-                      <Route
-                        path="notifications/users"
-                        element={<DashboardNotifications />}
-                      />
-                      <Route
-                        path="notifications/accounts"
-                        element={<DashboardNotifications />}
-                      />
-                      <Route
-                        path="notifications/security"
-                        element={<DashboardNotifications />}
-                      />
-                      <Route path="settings" element={<DashboardSettings />} />
-
-                      {/* Platform Admin Routes */}
-                      <Route path="platform" element={<PlatformOverview />} />
-                      <Route
-                        path="platform/users"
-                        element={<PlatformUsers />}
-                      />
-                      <Route
-                        path="platform/accounts"
-                        element={<PlatformAccounts />}
-                      />
-                      <Route
-                        path="platform/organizations"
-                        element={<PlatformOrganizations />}
-                      />
-                      <Route
-                        path="platform/products"
-                        element={<PlatformProducts />}
-                      />
-                      <Route
-                        path="platform/products/:productId"
-                        element={<ProductDetail />}
-                      />
-                      <Route
-                        path="platform/growth"
-                        element={<PlatformGrowth />}
-                      />
-                      <Route
-                        path="platform/security"
-                        element={<PlatformSecurity />}
-                      />
-                    </Route>
-
-                    {/* Test Component Route */}
-                    <Route path="/testcomponent" element={<TestComponent />} />
-
-                    {/* Catch-all */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                  <CookieBanner />
-                </AuthProvider>
-              </AnalyticsProvider>
-            </BrowserRouter>
+            <AppContent />
           </TooltipProvider>
         </ThemeProvider>
       </HelmetProvider>

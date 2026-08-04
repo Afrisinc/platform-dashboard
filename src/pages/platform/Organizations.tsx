@@ -132,14 +132,18 @@ export default function PlatformOrganizations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Organizations</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold truncate">Organizations</h1>
+          <p className="text-muted-foreground text-sm">
             Manage platform organizations and their members
           </p>
         </div>
-        <Button size="lg" onClick={() => setCreateDialogOpen(true)}>
+        <Button
+          size="lg"
+          onClick={() => setCreateDialogOpen(true)}
+          className="w-full sm:w-auto flex-shrink-0"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Organization
         </Button>

@@ -142,14 +142,14 @@ export function FilterBar({
 
         {/* Date Range Picker */}
         {enableDateRange && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Select
               value={datePreset}
               onValueChange={(v) =>
                 handleDatePresetChange(v as DateRangePreset)
               }
             >
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px]">
                 <Calendar className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Date Range" />
               </SelectTrigger>
@@ -163,7 +163,11 @@ export function FilterBar({
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                >
                   Custom Range
                 </Button>
               </PopoverTrigger>

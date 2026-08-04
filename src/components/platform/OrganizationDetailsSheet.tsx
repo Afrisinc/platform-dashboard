@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -18,8 +18,11 @@ import {
   usePlatformOrganizationMembers,
   useRemovePlatformOrganizationMember,
 } from "@/hooks/usePlatform";
+import { usePlatformOrganizationProducts } from "@/hooks/usePlatformProducts";
+import { useRoles } from "@/hooks/useMemberProducts";
+import { MemberProductCard } from "./MemberProductCard";
 import type { PlatformOrganization } from "@/types/platform";
-import { Building2, Users, Trash2, Plus, Edit } from "lucide-react";
+import { Building2, Users, Trash2, Plus, Edit, Package } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +34,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import {
+  fetchPublicProducts,
+  enrollAccountInProduct,
+  removeProductFromAccount,
+  fetchPlatformAccounts,
+} from "@/services/platformService";
+import { useApiHandler } from "@/hooks/useApiHandler";
 
 interface OrganizationDetailsSheetProps {
   organization: PlatformOrganization | null;
@@ -41,6 +51,14 @@ interface OrganizationDetailsSheetProps {
 
 const statusVariant = (s?: string) =>
   s === "ACTIVE" ? "default" : s === "SUSPENDED" ? "destructive" : "secondary";
+
+interface Product {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  status: string;
+}
 
 export function OrganizationDetailsSheet({
   organization,
@@ -54,10 +72,26 @@ export function OrganizationDetailsSheet({
     memberId: string;
     memberEmail: string;
   } | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [orgProducts, setOrgProducts] = useState<Product[]>([]);
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [selectedProductToRemove, setSelectedProductToRemove] =
+    useState<Product | null>(null);
+  const [selectedProductToEnroll, setSelectedProductToEnroll] =
+    useState<Product | null>(null);
+  const [enrollPlan, setEnrollPlan] = useState<"FREE" | "PRO" | "ENTERPRISE">(
+    "FREE",
+  );
 
   const { data: membersData, isLoading: membersLoading } =
     usePlatformOrganizationMembers(organization?.id || null);
   const removeMemMutation = useRemovePlatformOrganizationMember();
+  const { data: enrolledProductsData, isLoading: productsLoading } =
+    usePlatformOrganizationProducts(
+      activeTab === "products" ? organization?.id || null : null,
+    );
+  const { data: rolesData, isLoading: rolesLoading } = useRoles();
+  const { executeCall } = useApiHandler();
 
   const handleRemoveMember = async () => {
     if (!confirmRemove || !organization) return;
@@ -71,6 +105,110 @@ export function OrganizationDetailsSheet({
       toast.error("Failed to remove member");
     }
     setConfirmRemove(null);
+  };
+
+  useEffect(() => {
+    if (activeTab !== "products" || !isOpen) return;
+
+    const loadPublicProducts = async () => {
+      try {
+        const publicProducts = await fetchPublicProducts();
+        setAllProducts(publicProducts || []);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error("[Load Public Products Error]", {
+          error: err,
+          message: errorMessage,
+          timestamp: new Date().toISOString(),
+        });
+        toast.error(`Failed to load products: ${errorMessage}`);
+        setAllProducts([]);
+      }
+    };
+
+    loadPublicProducts();
+  }, [activeTab, isOpen]);
+
+  useEffect(() => {
+    if (enrolledProductsData) {
+      const enrolledProducts = (enrolledProductsData || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        description: p.description,
+        status: p.status,
+      }));
+      setOrgProducts(enrolledProducts);
+    }
+  }, [enrolledProductsData]);
+
+  const handleEnrollProduct = async () => {
+    if (!selectedProductToEnroll || !organization) return;
+
+    try {
+      const allAccounts = await fetchPlatformAccounts({
+        limit: 100,
+        offset: 0,
+      });
+      const orgAccount = allAccounts?.data?.find(
+        (acc) => acc.organization_id === organization.id,
+      );
+
+      if (!orgAccount?.id) {
+        toast.error("No account found for this organization");
+        return;
+      }
+
+      await enrollAccountInProduct(orgAccount.id, {
+        product_code: selectedProductToEnroll.code,
+        plan: enrollPlan,
+      });
+
+      setOrgProducts([...orgProducts, selectedProductToEnroll]);
+      setEnrollDialogOpen(false);
+      setSelectedProductToEnroll(null);
+      toast.success(`${selectedProductToEnroll.name} enrolled successfully`);
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Failed to enroll product";
+      toast.error(errorMsg);
+      console.error("[Enroll Product Error]", error);
+    }
+  };
+
+  const handleRemoveProduct = async () => {
+    if (!selectedProductToRemove || !organization) return;
+
+    try {
+      const allAccounts = await fetchPlatformAccounts({
+        limit: 100,
+        offset: 0,
+      });
+      const orgAccount = allAccounts?.data?.find(
+        (acc) => acc.organization_id === organization.id,
+      );
+
+      if (!orgAccount?.id) {
+        toast.error("No account found for this organization");
+        return;
+      }
+
+      await removeProductFromAccount(
+        orgAccount.id,
+        selectedProductToRemove.code,
+      );
+
+      setOrgProducts(
+        orgProducts.filter((p) => p.code !== selectedProductToRemove.code),
+      );
+      setSelectedProductToRemove(null);
+      toast.success(`${selectedProductToRemove.name} removed successfully`);
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Failed to remove product";
+      toast.error(errorMsg);
+      console.error("[Remove Product Error]", error);
+    }
   };
 
   if (!organization) return null;
@@ -105,10 +243,17 @@ export function OrganizationDetailsSheet({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden mt-4"
         >
-          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
             <TabsTrigger value="details" className="gap-2">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Details</span>
+            </TabsTrigger>
+            <TabsTrigger value="products" className="gap-2">
+              <Package className="h-4 w-4" />
+              <span className="hidden sm:inline">Products</span>
+              {orgProducts.length > 0 && (
+                <span className="ml-1 text-xs">({orgProducts.length})</span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="members" className="gap-2">
               <Users className="h-4 w-4" />
@@ -280,10 +425,10 @@ export function OrganizationDetailsSheet({
                   </Button>
                 </div>
 
-                {membersLoading ? (
+                {membersLoading || rolesLoading ? (
                   <div className="space-y-3">
                     {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 w-full" />
+                      <Skeleton key={i} className="h-32 w-full" />
                     ))}
                   </div>
                 ) : !membersData?.members.length ? (
@@ -298,64 +443,92 @@ export function OrganizationDetailsSheet({
                 ) : (
                   <div className="space-y-3">
                     {membersData.members.map((member) => (
-                      <Card key={member.id}>
+                      <MemberProductCard
+                        key={member.id}
+                        member={member}
+                        organizationId={organization.id}
+                        allRoles={rolesData || []}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Products Tab */}
+              <TabsContent value="products" className="space-y-4 mt-4">
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setEnrollDialogOpen(true)}
+                    disabled={
+                      productsLoading ||
+                      allProducts.length === 0 ||
+                      allProducts.every((p) =>
+                        orgProducts.find((op) => op.code === p.code),
+                      )
+                    }
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </div>
+
+                {productsLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
+                    ))}
+                  </div>
+                ) : !orgProducts.length ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+                      <p className="text-muted-foreground">
+                        No products enrolled yet
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {orgProducts.map((product) => (
+                      <Card key={product.id}>
                         <CardContent className="pt-4">
                           <div className="space-y-3">
-                            {/* Header with name and actions */}
                             <div className="flex items-start justify-between">
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm">
-                                  {[member.firstName, member.lastName]
-                                    .filter(Boolean)
-                                    .join(" ") || "Unknown"}
+                                  {product.name}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {member.email || "No email"}
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {product.description || product.code}
                                 </p>
                               </div>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
-                                  setConfirmRemove({
-                                    memberId: member.user_id,
-                                    memberEmail: member.email || "Unknown",
-                                  })
+                                  setSelectedProductToRemove(product)
                                 }
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>
 
-                            {/* Badges row */}
                             <div className="flex gap-2 flex-wrap">
-                              <Badge variant="secondary">{member.role}</Badge>
+                              <Badge variant="secondary" className="uppercase">
+                                {product.code}
+                              </Badge>
                               <Badge
                                 variant={
-                                  member.status === "ACTIVE"
+                                  product.status === "ACTIVE"
                                     ? "default"
-                                    : "destructive"
+                                    : "secondary"
                                 }
                               >
-                                {member.status || "ACTIVE"}
+                                {product.status}
                               </Badge>
                             </div>
-
-                            {/* Details row */}
-                            {member.phone && (
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                {member.phone && (
-                                  <div>
-                                    <p className="text-muted-foreground">
-                                      Phone
-                                    </p>
-                                    <p className="font-medium">
-                                      {member.phone}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -393,6 +566,92 @@ export function OrganizationDetailsSheet({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemoveMember}
+              className="bg-destructive"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Enroll Product Dialog */}
+      <AlertDialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add Product to Organization</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a product to enroll this organization in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product</label>
+              <select
+                value={selectedProductToEnroll?.id || ""}
+                onChange={(e) => {
+                  const product = allProducts.find(
+                    (p) => p.id === e.target.value,
+                  );
+                  setSelectedProductToEnroll(product || null);
+                }}
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              >
+                <option value="">Select a product...</option>
+                {allProducts
+                  .filter((p) => !orgProducts.find((op) => op.code === p.code))
+                  .map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plan</label>
+              <select
+                value={enrollPlan}
+                onChange={(e) =>
+                  setEnrollPlan(e.target.value as "FREE" | "PRO" | "ENTERPRISE")
+                }
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              >
+                <option value="FREE">Free</option>
+                <option value="PRO">Pro</option>
+                <option value="ENTERPRISE">Enterprise</option>
+              </select>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEnrollProduct}
+              disabled={!selectedProductToEnroll}
+            >
+              Enroll Product
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Product Dialog */}
+      <AlertDialog
+        open={!!selectedProductToRemove}
+        onOpenChange={() => setSelectedProductToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove{" "}
+              <strong>{selectedProductToRemove?.name}</strong> from this
+              organization?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveProduct}
               className="bg-destructive"
             >
               Remove

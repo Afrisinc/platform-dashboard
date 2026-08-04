@@ -176,39 +176,59 @@ export function DataTable<T extends Record<string, unknown>>({
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                <Table className="w-full">
                   <TableHeader>
-                    <TableRow>
-                      {columns.map((column) => (
-                        <TableHead
-                          key={String(column.key)}
-                          style={{ width: column.width }}
-                          className={`${column.align === "center" ? "text-center" : column.align === "right" ? "text-right" : ""} ${
-                            column.sortable
-                              ? "cursor-pointer select-none hover:bg-muted/50"
-                              : ""
-                          }`}
-                          onClick={() =>
-                            column.sortable && handleSort(String(column.key))
-                          }
-                        >
-                          <div className="flex items-center gap-2">
-                            {column.label}
-                            {column.sortable && (
-                              <div className="flex flex-col">
-                                {sortBy === String(column.key) ? (
-                                  sortOrder === "asc" ? (
-                                    <ChevronsUp className="h-4 w-4" />
-                                  ) : sortOrder === "desc" ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : null
-                                ) : null}
-                              </div>
-                            )}
-                          </div>
-                        </TableHead>
-                      ))}
+                    <TableRow className="hover:bg-transparent">
+                      {columns.map((column) => {
+                        const isHiddenOnMobile =
+                          column.key === "id" ||
+                          column.key === "legal_name" ||
+                          column.key === "tax_id" ||
+                          column.key === "org_phone";
+                        const isActions = column.key === "actions";
+                        return (
+                          <TableHead
+                            key={String(column.key)}
+                            style={{ width: column.width }}
+                            className={`whitespace-nowrap text-xs md:text-sm px-1 md:px-3 py-1 md:py-2 ${
+                              isHiddenOnMobile ? "hidden md:table-cell" : ""
+                            } ${
+                              column.align === "center"
+                                ? "text-center"
+                                : column.align === "right"
+                                  ? "text-right pr-1 md:pr-3"
+                                  : ""
+                            } ${
+                              column.sortable
+                                ? "cursor-pointer select-none hover:bg-muted/50"
+                                : ""
+                            }`}
+                            onClick={() =>
+                              column.sortable && handleSort(String(column.key))
+                            }
+                          >
+                            <div className="flex items-center gap-0.5 md:gap-1 min-w-0">
+                              <span
+                                className={`truncate ${isActions ? "hidden" : ""}`}
+                              >
+                                {column.label}
+                              </span>
+                              {column.sortable && (
+                                <div className="flex-shrink-0">
+                                  {sortBy === String(column.key) ? (
+                                    sortOrder === "asc" ? (
+                                      <ChevronsUp className="h-3 w-3" />
+                                    ) : sortOrder === "desc" ? (
+                                      <ChevronDown className="h-3 w-3" />
+                                    ) : null
+                                  ) : null}
+                                </div>
+                              )}
+                            </div>
+                          </TableHead>
+                        );
+                      })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -220,20 +240,30 @@ export function DataTable<T extends Record<string, unknown>>({
                         }
                         onClick={() => onRowClick?.(row)}
                       >
-                        {columns.map((column) => (
-                          <TableCell
-                            key={String(column.key)}
-                            className={
-                              column.align === "center"
-                                ? "text-center"
-                                : column.align === "right"
-                                  ? "text-right"
-                                  : ""
-                            }
-                          >
-                            {renderCellValue(column, row)}
-                          </TableCell>
-                        ))}
+                        {columns.map((column) => {
+                          const isHiddenOnMobile =
+                            column.key === "id" ||
+                            column.key === "legal_name" ||
+                            column.key === "tax_id" ||
+                            column.key === "org_phone";
+                          const isActions = column.key === "actions";
+                          return (
+                            <TableCell
+                              key={String(column.key)}
+                              className={`whitespace-nowrap text-xs md:text-sm px-1 md:px-3 py-1 md:py-2 ${
+                                isHiddenOnMobile ? "hidden md:table-cell" : ""
+                              } ${
+                                column.align === "center"
+                                  ? "text-center"
+                                  : column.align === "right"
+                                    ? "text-right"
+                                    : ""
+                              } ${isActions ? "px-0.5 md:px-3" : ""}`}
+                            >
+                              {renderCellValue(column, row)}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     ))}
                   </TableBody>
