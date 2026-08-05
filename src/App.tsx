@@ -84,11 +84,14 @@ const App = () => {
       // Update next-themes storage to match shared cookie
       if (sharedTheme) {
         localStorage.setItem("theme", sharedTheme);
-        document.documentElement.classList.toggle("dark", sharedTheme === "dark");
+        document.documentElement.classList.toggle(
+          "dark",
+          sharedTheme === "dark",
+        );
       }
 
       // Minimum 800ms delay to show loader
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
       setIsReady(true);
     };
 

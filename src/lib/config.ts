@@ -1,5 +1,4 @@
-export interface RuntimeConfig {
-  serverUrl: string;
+interface RuntimeConfig {
   apiUrl: string;
   authUiUrl: string;
 }
@@ -7,68 +6,45 @@ export interface RuntimeConfig {
 let config: RuntimeConfig | null = null;
 let configLoaded = false;
 
-export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
-  if (configLoaded) {
-    return config!;
-  }
+const getEnv = (key: string) => {
+  const runtime = (window as unknown as Record<string, Record<string, string>>).__ENV__?.[key];
+  if (runtime && !runtime.startsWith("__")) return runtime;
+  return import.meta.env[key as keyof ImportMetaEnv] as string;
+};
 
-  const getEnvValue = (key: string) => {
-    const windowEnv =
-      typeof window !== "undefined" && (window as any).__ENV__
-        ? (window as any).__ENV__[key]
-        : null;
-    if (windowEnv && !windowEnv.startsWith("__")) {
-      return windowEnv;
-    }
-    return (import.meta.env as any)[key];
-  };
+export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
+  if (configLoaded) return config!;
 
   try {
     const response = await fetch("/config.json", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
       cache: "no-store",
     });
+    const fileConfig = response.ok ? await response.json() : {};
 
-    let runtimeConfig: Partial<RuntimeConfig> = {};
-    if (response.ok) {
-      runtimeConfig = await response.json();
-    }
-
-    const apiUrl = getEnvValue("VITE_API_URL") || runtimeConfig.apiUrl || "";
     config = {
-      serverUrl: apiUrl,
-      apiUrl: apiUrl,
-      authUiUrl:
-        getEnvValue("VITE_AUTH_UI_URL") || runtimeConfig.authUiUrl || "",
+      apiUrl: getEnv("VITE_API_URL") || fileConfig.apiUrl || "",
+      authUiUrl: getEnv("VITE_AUTH_UI_URL") || fileConfig.authUiUrl || "",
     };
-
-    configLoaded = true;
-    return config;
   } catch {
-    const apiUrl = getEnvValue("VITE_API_URL") || "";
     config = {
-      serverUrl: apiUrl,
-      apiUrl: apiUrl,
-      authUiUrl: getEnvValue("VITE_AUTH_UI_URL") || "",
+      apiUrl: getEnv("VITE_API_URL") || "",
+      authUiUrl: getEnv("VITE_AUTH_UI_URL") || "",
     };
-    configLoaded = true;
-    return config;
   }
+
+  configLoaded = true;
+  return config;
 }
 
 export function getRuntimeConfig(): RuntimeConfig {
   if (!configLoaded || !config) {
-    throw new Error(
-      "Configuration not loaded. Call loadRuntimeConfig() first.",
-    );
+    throw new Error("Call loadRuntimeConfig() first");
   }
   return config;
 }
 
 export function getConfigValue(key: keyof RuntimeConfig): string {
-  const cfg = getRuntimeConfig();
-  return cfg[key] || "";
+  return getRuntimeConfig()[key] || "";
 }
 
 export function isRuntimeConfigLoaded(): boolean {
