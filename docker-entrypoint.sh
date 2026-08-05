@@ -1,10 +1,15 @@
 #!/bin/sh
 set -e
 
-VITE_API_URL="${VITE_API_URL:-}"
-VITE_AUTH_UI_URL="${VITE_AUTH_UI_URL:-}"
+DIST_DIR="/usr/share/nginx/html"
+ENV_FILE="$DIST_DIR/env-config.js"
 
-sed -i "s|__VITE_API_URL__|${VITE_API_URL}|g" /usr/share/nginx/html/env-config.js
-sed -i "s|__VITE_AUTH_UI_URL__|${VITE_AUTH_UI_URL}|g" /usr/share/nginx/html/env-config.js
+echo "Injecting runtime environment variables..."
 
-exec "$@"
+sed -i "s|__VITE_API_URL__|${VITE_API_URL:-}|g" "$ENV_FILE"
+sed -i "s|__VITE_AUTH_UI_URL__|${VITE_AUTH_UI_URL:-}|g" "$ENV_FILE"
+
+echo "Environment injection complete:"
+cat "$ENV_FILE"
+
+exec nginx -g "daemon off;"
