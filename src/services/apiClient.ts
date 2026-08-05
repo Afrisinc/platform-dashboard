@@ -1,27 +1,32 @@
 import axios, { AxiosInstance } from "axios";
 import { logoutHandler } from "@/lib/authUtils";
-import { getRuntimeConfig } from "@/lib/config";
+import { getRuntimeConfig, isRuntimeConfigLoaded } from "@/lib/config";
+
+let apiClientInstance: AxiosInstance | null = null;
 
 const createApiClient = () => {
-  const config = getRuntimeConfig();
+  let baseURL: string;
 
-  const instance = axios.create({
-    baseURL: config.serverUrl || import.meta.env.VITE_API_URL,
-  });
+  try {
+    const config = getRuntimeConfig();
+    baseURL = config.apiUrl;
+  } catch {
+    baseURL = import.meta.env.VITE_API_URL || "";
+  }
+
+  const instance = axios.create({ baseURL });
 
   instance.interceptors.request.use(async (request) => {
     const token = localStorage.getItem("token");
     if (token) {
       request.headers.Authorization = `Bearer ${token}`;
     }
-
     return request;
   });
 
   instance.interceptors.response.use(
     (response) => response,
     (error) => {
-      // Handle explicit token errors
       const isTokenError =
         error?.response?.data?.error?.name === "TokenExpiredError" ||
         error?.response?.data?.error === "Token was not provided" ||
@@ -34,7 +39,6 @@ const createApiClient = () => {
           (typeof error?.response?.data?.error === "string" &&
             error?.response?.data?.error?.toLowerCase()?.includes("token")));
 
-      // Only logout on explicit authentication failures
       if (isTokenError || is401WithTokenMessage) {
         logoutHandler();
       }
@@ -46,13 +50,9 @@ const createApiClient = () => {
   return instance;
 };
 
-let apiClientInstance: AxiosInstance | null = null;
-
-const getApiClient = () => {
-  if (!apiClientInstance) {
+export default function getApiClient() {
+  if (!apiClientInstance || !isRuntimeConfigLoaded()) {
     apiClientInstance = createApiClient();
   }
   return apiClientInstance;
-};
-
-export default getApiClient;
+}
