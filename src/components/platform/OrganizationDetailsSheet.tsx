@@ -428,16 +428,16 @@ export function OrganizationDetailsSheet({
                       <Card key={product.id}>
                         <CardContent className="pt-4">
                           <div className="space-y-3">
-                            <div className="flex items-start justify-between">
+                            <div className="flex gap-3">
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm">
                                   {product.name}
                                 </p>
-                                <p className="text-xs text-muted-foreground truncate">
+                                <p className="text-xs text-muted-foreground line-clamp-2">
                                   {product.description || product.code}
                                 </p>
                               </div>
-                              <div className="flex gap-1 flex-shrink-0">
+                              <div className="flex gap-1 flex-shrink-0 h-fit">
                                 <Button
                                   variant="ghost"
                                   size="icon"
