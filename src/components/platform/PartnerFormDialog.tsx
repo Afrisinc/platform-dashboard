@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { FormDialog } from "@/components/dialogs/FormDialog";
@@ -21,11 +21,27 @@ export function PartnerFormDialog({
   onOpenChange,
   onSuccess,
 }: PartnerFormDialogProps) {
-  const [name, setName] = useState(partner?.name || "");
-  const [email, setEmail] = useState(partner?.email || "");
-  const [phone, setPhone] = useState(partner?.phone || "");
-  const [location, setLocation] = useState(partner?.location || "");
-  const [description, setDescription] = useState(partner?.description || "");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (isOpen && partner) {
+      setName(partner.name || "");
+      setEmail(partner.email || "");
+      setPhone(partner.phone || "");
+      setLocation(partner.location || "");
+      setDescription(partner.description || "");
+    } else if (isOpen) {
+      setName("");
+      setEmail("");
+      setPhone("");
+      setLocation("");
+      setDescription("");
+    }
+  }, [isOpen, partner]);
 
   const createMutation = useCreatePartner();
   const updateMutation = useUpdatePartner();
