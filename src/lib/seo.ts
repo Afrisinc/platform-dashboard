@@ -28,18 +28,14 @@ export const SITE_SEO: SiteSEO = {
   twitterHandle: "@Afrisinc",
 };
 
-// Facebook App ID — works in both Vite (client) and Node/tsc (server) builds
-// Set FB_APP_ID in your server .env, or VITE_FB_APP_ID for the client build
 const FB_APP_ID: string = (() => {
   try {
-    // Vite client build
-    if (typeof import.meta !== "undefined" && (import.meta as any).env) {
-      return (import.meta as any).env.VITE_FB_APP_ID || "";
+    if (typeof import.meta !== "undefined" && (import.meta as unknown as Record<string, Record<string, string>>).env) {
+      return (import.meta as unknown as Record<string, Record<string, string>>).env.VITE_FB_APP_ID || "";
     }
   } catch {
     // not in Vite context
   }
-  // Node.js server build (tsc)
   if (typeof process !== "undefined" && process.env) {
     return process.env.FB_APP_ID || process.env.VITE_FB_APP_ID || "";
   }

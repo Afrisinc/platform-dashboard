@@ -1,3 +1,11 @@
+export interface Partner {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+}
+
 export interface ProductEnrollment {
   enrollmentId: string;
   status: string;
@@ -12,5 +20,6 @@ export interface OrganizationProduct {
   description?: string;
   status: string;
   baseUrl?: string;
-  enrollment: ProductEnrollment;
+  partner?: Partner;
+  enrollment?: ProductEnrollment;
 }

@@ -17,12 +17,16 @@ import { UpdateOrganizationDialog } from "@/components/platform/UpdateOrganizati
 import {
   usePlatformOrganizationMembers,
   useRemovePlatformOrganizationMember,
+  useDeletePlatformOrganization,
 } from "@/hooks/usePlatform";
 import { usePlatformOrganizationProducts } from "@/hooks/usePlatformProducts";
 import { useRoles } from "@/hooks/useMemberProducts";
 import { MemberProductCard } from "./MemberProductCard";
+import { PartnersList } from "./PartnersList";
+import { AddProductToOrganizationDialog } from "./AddProductToOrganizationDialog";
+import { EditProductDialog } from "./EditProductDialog";
 import type { PlatformOrganization } from "@/types/platform";
-import { Building2, Users, Trash2, Plus, Edit, Package } from "lucide-react";
+import { Building2, Users, Trash2, Plus, Edit, Package, Handshake } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,13 +38,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import {
-  fetchPublicProducts,
-  enrollAccountInProduct,
-  removeProductFromAccount,
-  fetchPlatformAccounts,
-} from "@/services/platformService";
-import { useApiHandler } from "@/hooks/useApiHandler";
 
 interface OrganizationDetailsSheetProps {
   organization: PlatformOrganization | null;
@@ -58,6 +55,9 @@ interface Product {
   code: string;
   description?: string;
   status: string;
+  partner?: { id: string; name: string; email?: string };
+  enrollment?: { plan: string };
+  baseUrl?: string;
 }
 
 export function OrganizationDetailsSheet({
@@ -72,26 +72,23 @@ export function OrganizationDetailsSheet({
     memberId: string;
     memberEmail: string;
   } | null>(null);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
   const [orgProducts, setOrgProducts] = useState<Product[]>([]);
-  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [selectedProductToRemove, setSelectedProductToRemove] =
     useState<Product | null>(null);
-  const [selectedProductToEnroll, setSelectedProductToEnroll] =
+  const [selectedProductToEdit, setSelectedProductToEdit] =
     useState<Product | null>(null);
-  const [enrollPlan, setEnrollPlan] = useState<"FREE" | "PRO" | "ENTERPRISE">(
-    "FREE",
-  );
 
   const { data: membersData, isLoading: membersLoading } =
     usePlatformOrganizationMembers(organization?.id || null);
   const removeMemMutation = useRemovePlatformOrganizationMember();
+  const deleteOrgMutation = useDeletePlatformOrganization();
   const { data: enrolledProductsData, isLoading: productsLoading } =
     usePlatformOrganizationProducts(
       activeTab === "products" ? organization?.id || null : null,
     );
   const { data: rolesData, isLoading: rolesLoading } = useRoles();
-  const { executeCall } = useApiHandler();
 
   const handleRemoveMember = async () => {
     if (!confirmRemove || !organization) return;
@@ -107,27 +104,19 @@ export function OrganizationDetailsSheet({
     setConfirmRemove(null);
   };
 
-  useEffect(() => {
-    if (activeTab !== "products" || !isOpen) return;
-
-    const loadPublicProducts = async () => {
-      try {
-        const publicProducts = await fetchPublicProducts();
-        setAllProducts(publicProducts || []);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error("[Load Public Products Error]", {
-          error: err,
-          message: errorMessage,
-          timestamp: new Date().toISOString(),
-        });
-        toast.error(`Failed to load products: ${errorMessage}`);
-        setAllProducts([]);
-      }
-    };
-
-    loadPublicProducts();
-  }, [activeTab, isOpen]);
+  const handleDeleteOrganization = async () => {
+    if (!organization) return;
+    try {
+      await deleteOrgMutation.mutateAsync(organization.id);
+      toast.success(`${organization.name} deleted successfully`);
+      setConfirmDelete(false);
+      onClose();
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Failed to delete organization";
+      toast.error(errorMsg);
+    }
+  };
 
   useEffect(() => {
     if (enrolledProductsData) {
@@ -137,79 +126,13 @@ export function OrganizationDetailsSheet({
         code: p.code,
         description: p.description,
         status: p.status,
+        partner: p.partner || undefined,
+        enrollment: p.enrollment,
+        baseUrl: p.baseUrl || undefined,
       }));
       setOrgProducts(enrolledProducts);
     }
   }, [enrolledProductsData]);
-
-  const handleEnrollProduct = async () => {
-    if (!selectedProductToEnroll || !organization) return;
-
-    try {
-      const allAccounts = await fetchPlatformAccounts({
-        limit: 100,
-        offset: 0,
-      });
-      const orgAccount = allAccounts?.data?.find(
-        (acc) => acc.organization_id === organization.id,
-      );
-
-      if (!orgAccount?.id) {
-        toast.error("No account found for this organization");
-        return;
-      }
-
-      await enrollAccountInProduct(orgAccount.id, {
-        product_code: selectedProductToEnroll.code,
-        plan: enrollPlan,
-      });
-
-      setOrgProducts([...orgProducts, selectedProductToEnroll]);
-      setEnrollDialogOpen(false);
-      setSelectedProductToEnroll(null);
-      toast.success(`${selectedProductToEnroll.name} enrolled successfully`);
-    } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Failed to enroll product";
-      toast.error(errorMsg);
-      console.error("[Enroll Product Error]", error);
-    }
-  };
-
-  const handleRemoveProduct = async () => {
-    if (!selectedProductToRemove || !organization) return;
-
-    try {
-      const allAccounts = await fetchPlatformAccounts({
-        limit: 100,
-        offset: 0,
-      });
-      const orgAccount = allAccounts?.data?.find(
-        (acc) => acc.organization_id === organization.id,
-      );
-
-      if (!orgAccount?.id) {
-        toast.error("No account found for this organization");
-        return;
-      }
-
-      await removeProductFromAccount(
-        orgAccount.id,
-        selectedProductToRemove.code,
-      );
-
-      setOrgProducts(
-        orgProducts.filter((p) => p.code !== selectedProductToRemove.code),
-      );
-      setSelectedProductToRemove(null);
-      toast.success(`${selectedProductToRemove.name} removed successfully`);
-    } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Failed to remove product";
-      toast.error(errorMsg);
-      console.error("[Remove Product Error]", error);
-    }
-  };
 
   if (!organization) return null;
 
@@ -218,7 +141,7 @@ export function OrganizationDetailsSheet({
       <SheetContent className="w-full sm:max-w-xl md:max-w-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <SheetHeader className="flex-shrink-0">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Building2 className="h-6 w-6 text-primary" />
             </div>
@@ -234,6 +157,14 @@ export function OrganizationDetailsSheet({
             >
               {organization.status || "ACTIVE"}
             </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setConfirmDelete(true)}
+              className="flex-shrink-0"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
           </div>
         </SheetHeader>
 
@@ -243,7 +174,7 @@ export function OrganizationDetailsSheet({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden mt-4"
         >
-          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
             <TabsTrigger value="details" className="gap-2">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Details</span>
@@ -254,6 +185,10 @@ export function OrganizationDetailsSheet({
               {orgProducts.length > 0 && (
                 <span className="ml-1 text-xs">({orgProducts.length})</span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="partners" className="gap-2">
+              <Handshake className="h-4 w-4" />
+              <span className="hidden sm:inline">Partners</span>
             </TabsTrigger>
             <TabsTrigger value="members" className="gap-2">
               <Users className="h-4 w-4" />
@@ -411,6 +346,11 @@ export function OrganizationDetailsSheet({
                 </div>
               </TabsContent>
 
+              {/* Partners Tab */}
+              <TabsContent value="partners" className="space-y-4 mt-4">
+                {organization && <PartnersList organizationId={organization.id} />}
+              </TabsContent>
+
               {/* Members Tab */}
               <TabsContent value="members" className="space-y-4 mt-4">
                 <div className="flex gap-2">
@@ -460,14 +400,7 @@ export function OrganizationDetailsSheet({
                   <Button
                     size="sm"
                     className="flex-1"
-                    onClick={() => setEnrollDialogOpen(true)}
-                    disabled={
-                      productsLoading ||
-                      allProducts.length === 0 ||
-                      allProducts.every((p) =>
-                        orgProducts.find((op) => op.code === p.code),
-                      )
-                    }
+                    onClick={() => setAddProductDialogOpen(true)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Product
@@ -504,15 +437,26 @@ export function OrganizationDetailsSheet({
                                   {product.description || product.code}
                                 </p>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  setSelectedProductToRemove(product)
-                                }
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <div className="flex gap-1 flex-shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    setSelectedProductToEdit(product)
+                                  }
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    setSelectedProductToRemove(product)
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </div>
 
                             <div className="flex gap-2 flex-wrap">
@@ -528,7 +472,44 @@ export function OrganizationDetailsSheet({
                               >
                                 {product.status}
                               </Badge>
+                              <Badge variant={product.partner ? "outline" : "default"} className="text-xs">
+                                {product.partner ? "Partner Product" : "Organization"}
+                              </Badge>
+                              {product.enrollment?.plan && (
+                                <Badge variant="outline">
+                                  {product.enrollment.plan}
+                                </Badge>
+                              )}
                             </div>
+
+                            {product.partner && (
+                              <div className="text-xs bg-muted rounded p-2">
+                                <p className="text-muted-foreground">
+                                  Managed by{" "}
+                                  <span className="font-medium text-foreground">
+                                    {product.partner.name}
+                                  </span>
+                                </p>
+                                {product.partner.email && (
+                                  <p className="text-muted-foreground">
+                                    {product.partner.email}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {product.baseUrl && (
+                              <div className="text-xs text-muted-foreground break-all">
+                                <a
+                                  href={product.baseUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline dark:text-blue-400"
+                                >
+                                  {product.baseUrl}
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -547,6 +528,31 @@ export function OrganizationDetailsSheet({
         isOpen={updateDialogOpen}
         onClose={() => setUpdateDialogOpen(false)}
       />
+
+      {/* Delete Organization Dialog */}
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Organization</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete{" "}
+              <strong>{organization.name}</strong>? This action cannot be undone
+              and will delete all related data including members, products, and
+              partners.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteOrganization}
+              className="bg-destructive"
+              disabled={deleteOrgMutation.isPending}
+            >
+              {deleteOrgMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirm Remove Member Dialog */}
       <AlertDialog
@@ -574,91 +580,25 @@ export function OrganizationDetailsSheet({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Enroll Product Dialog */}
-      <AlertDialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add Product to Organization</AlertDialogTitle>
-            <AlertDialogDescription>
-              Select a product to enroll this organization in.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Product</label>
-              <select
-                value={selectedProductToEnroll?.id || ""}
-                onChange={(e) => {
-                  const product = allProducts.find(
-                    (p) => p.id === e.target.value,
-                  );
-                  setSelectedProductToEnroll(product || null);
-                }}
-                className="w-full px-3 py-2 border rounded-md text-sm"
-              >
-                <option value="">Select a product...</option>
-                {allProducts
-                  .filter((p) => !orgProducts.find((op) => op.code === p.code))
-                  .map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
+      <AddProductToOrganizationDialog
+        organizationId={organization?.id || ""}
+        isOpen={addProductDialogOpen}
+        onOpenChange={setAddProductDialogOpen}
+        onSuccess={() => {
+          setAddProductDialogOpen(false);
+        }}
+      />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Plan</label>
-              <select
-                value={enrollPlan}
-                onChange={(e) =>
-                  setEnrollPlan(e.target.value as "FREE" | "PRO" | "ENTERPRISE")
-                }
-                className="w-full px-3 py-2 border rounded-md text-sm"
-              >
-                <option value="FREE">Free</option>
-                <option value="PRO">Pro</option>
-                <option value="ENTERPRISE">Enterprise</option>
-              </select>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleEnrollProduct}
-              disabled={!selectedProductToEnroll}
-            >
-              Enroll Product
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Remove Product Dialog */}
-      <AlertDialog
-        open={!!selectedProductToRemove}
-        onOpenChange={() => setSelectedProductToRemove(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove{" "}
-              <strong>{selectedProductToRemove?.name}</strong> from this
-              organization?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemoveProduct}
-              className="bg-destructive"
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {selectedProductToEdit && (
+        <EditProductDialog
+          product={selectedProductToEdit}
+          organizationId={organization?.id || ""}
+          isOpen={!!selectedProductToEdit}
+          onOpenChange={(open) => {
+            if (!open) setSelectedProductToEdit(null);
+          }}
+        />
+      )}
     </Sheet>
   );
 }

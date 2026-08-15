@@ -15,6 +15,7 @@ import type {
 import type { OrganizationProduct } from "@/types/products";
 
 import apiClient from "./apiClient";
+import { getErrorMessage } from "@/lib/errorHandler";
 import { QueryParams } from "@/types/shared";
 import { LoginEventResponse } from "@/types/auth.security";
 
@@ -415,8 +416,76 @@ export async function updatePlatformOrganization(
       updatedAt: data.data.updatedAt,
     };
   } catch {
-    // Error Error updating organization:", error);
     throw error;
+  }
+}
+
+export async function deletePlatformOrganization(
+  organizationId: string,
+): Promise<{ id: string; deleted: boolean; message: string }> {
+  try {
+    const { data } = await apiClient().delete(
+      `/auth/organizations/${organizationId}`,
+    );
+
+    if (!data.success || !data.data) {
+      throw new Error(getErrorMessage({ response: data }));
+    }
+
+    return {
+      id: data.data.id,
+      deleted: data.data.deleted,
+      message: data.data.message,
+    };
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+}
+
+export async function updateOrganizationProduct(
+  organizationId: string,
+  productId: string,
+  updateData: {
+    name?: string;
+    description?: string;
+    baseUrl?: string;
+    status?: "PROVISIONING" | "ACTIVE" | "SUSPENDED" | "DEPRECATED" | "COMING_SOON";
+    enrollmentStatus?: "PROVISIONING" | "ACTIVE" | "SUSPENDED" | "DEPRECATED" | "COMING_SOON";
+    plan?: "FREE" | "PRO" | "ENTERPRISE";
+  },
+): Promise<OrganizationProduct> {
+  try {
+    const { data } = await apiClient().put(
+      `/auth/organizations/${organizationId}/products/${productId}`,
+      updateData,
+    );
+
+    if (!data.success || !data.data) {
+      throw new Error(getErrorMessage({ response: data }));
+    }
+
+    const product = data.data.product || data.data;
+    const enrollment = data.data.enrollment;
+
+    return {
+      id: product.id,
+      name: product.name,
+      code: product.code,
+      description: product.description,
+      status: product.status,
+      baseUrl: product.baseUrl,
+      partner: product.partner,
+      enrollment: enrollment
+        ? {
+            enrollmentId: enrollment.id,
+            status: enrollment.status,
+            plan: enrollment.plan,
+            enrolledAt: enrollment.createdAt,
+          }
+        : undefined,
+    };
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
   }
 }
 
@@ -967,11 +1036,11 @@ export async function fetchOrganizationProducts(
     );
 
     if (!data.success || !data.data?.products) {
-      throw new Error("Invalid API response format");
+      throw new Error(data.resp_msg || "Failed to fetch organization products");
     }
 
     return data.data.products || [];
   } catch (error) {
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 }

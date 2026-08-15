@@ -1,5 +1,5 @@
-import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { fetchOrganizationProducts } from "@/services/platformService";
+import { useQuery, useMutation, useQueryClient, UseQueryResult } from "@tanstack/react-query";
+import { fetchOrganizationProducts, updateOrganizationProduct } from "@/services/platformService";
 import type { OrganizationProduct } from "@/types/products";
 
 export const usePlatformOrganizationProducts = (
@@ -13,5 +13,30 @@ export const usePlatformOrganizationProducts = (
         : Promise.resolve([]),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useUpdateOrganizationProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      productId,
+      updateData,
+    }: {
+      organizationId: string;
+      productId: string;
+      updateData: {
+        name?: string;
+        description?: string;
+        baseUrl?: string;
+        status?: "PROVISIONING" | "ACTIVE" | "SUSPENDED" | "DEPRECATED" | "COMING_SOON";
+        enrollmentStatus?: "PROVISIONING" | "ACTIVE" | "SUSPENDED" | "DEPRECATED" | "COMING_SOON";
+        plan?: "FREE" | "PRO" | "ENTERPRISE";
+      };
+    }) => updateOrganizationProduct(organizationId, productId, updateData),
+    onSuccess: (_, { organizationId }) => {
+      qc.invalidateQueries({ queryKey: ["organizationProducts", organizationId] });
+    },
   });
 };

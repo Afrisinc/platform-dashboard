@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import type { AxiosError } from "axios";
+import { AxiosError } from "axios";
 
 export interface ApiResponse<T = unknown> {
   success: boolean;

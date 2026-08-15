@@ -1,4 +1,5 @@
 import apiClient from "./apiClient";
+import { getErrorMessage } from "@/lib/errorHandler";
 import type { Role, MemberProduct } from "@/types/members";
 
 export async function fetchRoles(): Promise<Role[]> {
@@ -11,7 +12,7 @@ export async function fetchRoles(): Promise<Role[]> {
 
     return data.data.roles || [];
   } catch (error) {
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 }
 
@@ -23,9 +24,8 @@ export async function grantMemberProductAccess(
 ): Promise<MemberProduct> {
   try {
     const { data } = await apiClient().post(
-      `/auth/organizations/${organizationId}/members/${userId}/products`,
+      `/auth/organizations/${organizationId}/members/${userId}/products/${productCode}`,
       {
-        product_code: productCode,
         role_id: roleId,
       },
     );
@@ -36,7 +36,7 @@ export async function grantMemberProductAccess(
 
     return data.data;
   } catch (error) {
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 }
 
@@ -54,7 +54,7 @@ export async function revokeMemberProductAccess(
       throw new Error("Failed to revoke product access");
     }
   } catch (error) {
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 }
 
@@ -73,6 +73,6 @@ export async function fetchMemberProducts(
 
     return data.data.products || [];
   } catch (error) {
-    throw error;
+    throw new Error(getErrorMessage(error));
   }
 }

@@ -13,6 +13,7 @@ import {
   fetchPlatformUserAccounts,
   createPlatformOrganization,
   updatePlatformOrganization,
+  deletePlatformOrganization,
   addPlatformOrganizationMember,
   removePlatformOrganizationMember,
   suspendUser,
@@ -193,6 +194,17 @@ export const useRemovePlatformOrganizationMember = () => {
     }) => removePlatformOrganizationMember(organizationId, userId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["platform", "organization-members"] }),
+  });
+};
+
+export const useDeletePlatformOrganization = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (organizationId: string) =>
+      deletePlatformOrganization(organizationId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["platform", "organizations"] });
+    },
   });
 };
 
